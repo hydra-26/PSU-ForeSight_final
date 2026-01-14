@@ -1060,7 +1060,7 @@
 // export default PSUForeSight;
 
 import React, { useState, useMemo } from "react";
-import Logo from "../assets/logo-white.svg";
+import Logo from "../assets/lion-logo.svg";
 import Icon from "../assets/Icon-white.svg";
 import {
   LayoutDashboard,
@@ -1078,6 +1078,7 @@ import {
 import { supabase } from "../config/supabase";
 import { useEnrollmentData } from "../hooks/useEnrollmentData";
 import { useGraduateData } from "../hooks/useGraduateData";
+import { useUserProfile } from "../hooks/useUserProfile";
 import { ErrorBoundary } from "../components/shared";
 
 // Import page components
@@ -1092,15 +1093,19 @@ const PSUForeSight = () => {
   // ✅ Enrollment data
   const { data, isLoading, error } = useEnrollmentData();
 
-  // ✅ Graduation data (NEW)
+  // ✅ Graduation data
   const {
     data: graduateData,
     isLoading: graduateLoading,
     error: graduateError
   } = useGraduateData();
 
+  // ✅ User profile data (NEW)
+  const { user } = useUserProfile();
+
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const menuItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard Overview" },
@@ -1114,9 +1119,12 @@ const PSUForeSight = () => {
   // Logout function
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      window.location.href = "/login";
+      // Clear user data from localStorage
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      
+      // Redirect to login page
+      window.location.href = "/";
     } catch (error) {
       console.error("Error logging out:", error.message);
       alert("Failed to logout. Please try again.");
@@ -1177,7 +1185,7 @@ const PSUForeSight = () => {
               <img
                 src={Logo}
                 alt="PSU Logo"
-                className="w-30 h-30 transition-all duration-300"
+                className="w-26 h-26 transition-all duration-300"
               />
             )}
           </div>
@@ -1216,19 +1224,6 @@ const PSUForeSight = () => {
               );
             })}
           </nav>
-
-          <div className="p-4 border-t border-blue-900">
-            <button
-              onClick={handleLogout}
-              title="Logout"
-              className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-blue-900 rounded-lg transition"
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && (
-                <span className="font-medium text-sm">Logout</span>
-              )}
-            </button>
-          </div>
         </aside>
 
         {/* Main Content */}
@@ -1236,27 +1231,89 @@ const PSUForeSight = () => {
           {/* Top Header */}
           <header className="bg-white border-b border-gray-200 px-8 py-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-                <p className="text-sm text-gray-500">
-                  Real-time analytics and insights
-                </p>
-              </div>
-
-              <div className="flex items-center gap-4">
-                {/* Notifications */}
-                <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-
-                {/* Profile */}
-                <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                  <div className="w-10 h-10 bg-[#003366] rounded-full flex items-center justify-center text-white font-semibold">
-                    A
-                  </div>
+              <div className="flex items-center gap-4 flex-1">
+                <h2 className="text-xl font-bold text-gray-900">ForeSight</h2>
+                <div className="relative hidden sm:flex items-center">
+                  <Search className="absolute left-3 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search students, programs, or data..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
+
+              <div className="flex items-center gap-6">
+                {/* Dropdown selector */}
+                <div className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded-lg">
+                  <span className="text-sm text-gray-600">All Campuses</span>
+                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                </div>
+
+                {/* Notification Icon */}
+                <button className="relative">
+                  <Bell className="w-6 h-6 text-gray-600 hover:text-gray-800" />
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+
+                {/* Profile Button */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="w-10 h-10 bg-[#003366] rounded-full flex items-center justify-center text-white font-semibold text-sm hover:bg-blue-800 transition"
+                  >
+                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+                  </button>
+
+                  {/* Profile Dropdown Menu */}
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                      {/* User Info Section */}
+                      <div className="p-6 border-b border-gray-200">
+                        <h2 className="text-lg font-bold text-gray-900">
+                          {user?.name || "User Name"}
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {user?.email || "user@psu.edu.ph"}
+                        </p>
+                        <div className="mt-4">
+                          <span className="inline-block bg-blue-900 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                            {user?.role || "Campus-Level User"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="p-3">
+                        <button className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                          Profile Settings
+                        </button>
+                        <button className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                          Preferences
+                        </button>
+                      </div>
+
+                      {/* Sign Out */}
+                      <div className="p-3 border-t border-gray-200">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg transition font-semibold"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Close dropdown when clicking outside */}
+              {showProfileMenu && (
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowProfileMenu(false)}
+                ></div>
+              )}
             </div>
           </header>
 

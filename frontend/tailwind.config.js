@@ -1,12 +1,3 @@
-// /** @type {import('tailwindcss').Config} */
-// module.exports = {
-//   content: [],
-//   theme: {
-//     extend: {},
-//   },
-//   plugins: [],
-// }
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -14,6 +5,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Lexend', 'sans-serif'],
+      },
       colors: {
         'psu-blue': '#0047AB',
         'psu-gold': '#FFD700',

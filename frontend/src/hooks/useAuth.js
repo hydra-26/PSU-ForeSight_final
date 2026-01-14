@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { supabase } from "../config/supabase"; // adjust your path
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -7,35 +8,57 @@ export const useAuth = () => {
   const loginUser = async (email, password) => {
     setLoading(true);
 
-    // 1️⃣ Sign in with Supabase Auth
-    const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password })
+      });
 
-    if (authError) {
+      if (!response.ok) {
+        const errorData = await response.json();
+        setLoading(false);
+        return { error: errorData.error || "Invalid email or password" };
+      }
+
+      const userData = await response.json();
+      
+      // Store user data in localStorage - include role to avoid race condition
+      if (userData.user && userData.user.email) {
+        localStorage.setItem('user', JSON.stringify({
+          email: userData.user.email,
+          id: userData.user.id,
+          name: userData.user.name,
+          role: userData.user.role
+        }));
+        console.log('User stored in localStorage:', userData.user.email, 'Role:', userData.user.role);
+      }
+      
       setLoading(false);
-      return { error: "Invalid email or password" };
+      return { user: userData.user, success: true };
+    } catch (err) {
+      setLoading(false);
+      return { error: err.message || "Login failed" };
     }
-
-    // 2️⃣ Lookup user details in your own `users` table
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .single();
-
-    setLoading(false);
-
-    if (userError || !userRecord) {
-      return { error: "No matched user record in database" };
-    }
-
-    return { user: userRecord }; // success
   };
 
   const logoutUser = async () => {
-    await supabase.auth.signOut();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        console.error("Logout failed");
+      }
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   return { loginUser, logoutUser, loading };

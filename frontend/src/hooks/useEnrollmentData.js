@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../config/supabase';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const useEnrollmentData = () => {
   const [data, setData] = useState([]);
@@ -11,17 +12,17 @@ export const useEnrollmentData = () => {
     setError(null);
     
     try {
-      const { data: fetchedData, error: fetchError } = await supabase
-        .from("enrolled")
-        .select("*")
-        .order("Year");
+      const response = await fetch(`${API_BASE_URL}/api/enrollment`);
       
-      if (fetchError) throw fetchError;
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
       
+      const fetchedData = await response.json();
       setData(fetchedData || []);
     } catch (err) {
       setError(err.message);
-      console.error("Error fetching data:", err);
+      console.error("Error fetching enrollment data:", err);
     } finally {
       setIsLoading(false);
     }
@@ -29,24 +30,6 @@ export const useEnrollmentData = () => {
 
   useEffect(() => {
     fetchData();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel("realtime-enrollments")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "enrolled" },
-        () => {
-          console.log("Data changed, refetching...");
-          fetchData();
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription on unmount
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   return { 
